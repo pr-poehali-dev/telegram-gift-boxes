@@ -50,6 +50,8 @@ const Index = () => {
   const [isOpeningBox, setIsOpeningBox] = useState(false);
   const [openingResult, setOpeningResult] = useState<{type: 'stars' | 'heart' | 'rose', amount: number} | null>(null);
   const [isDemoMode, setIsDemoMode] = useState(false);
+  const [showBoxDetails, setShowBoxDetails] = useState(false);
+  const [selectedBoxForDetails, setSelectedBoxForDetails] = useState<GiftBox | null>(null);
 
   const giftBoxes: GiftBox[] = [
     {
@@ -270,7 +272,11 @@ const Index = () => {
                 <Card 
                   key={box.id}
                   className={`neon-box bg-gradient-to-br ${getRarityBg(box.rarity)} border-2 ${getRarityColor(box.rarity)} cursor-pointer transition-all duration-300 ${selectedBox === box.id ? 'ring-2 ring-neon-yellow' : ''}`}
-                  onClick={() => setSelectedBox(box.id)}
+                  onClick={() => {
+                    setSelectedBox(box.id);
+                    setSelectedBoxForDetails(box);
+                    setShowBoxDetails(true);
+                  }}
                 >
                   <CardContent className="p-6">
                     <div className="aspect-square mb-4 overflow-hidden rounded-lg">
@@ -318,8 +324,8 @@ const Index = () => {
                               className="text-xs border-neon-purple text-neon-purple hover:bg-neon-purple hover:text-gaming-dark"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setIsDemoMode(true);
-                                handleBoxOpen(box, true);
+                                setSelectedBoxForDetails(box);
+                                setShowBoxDetails(true);
                               }}
                             >
                               🎬 Демо
@@ -347,9 +353,8 @@ const Index = () => {
                           } text-gaming-dark font-semibold`}
                           onClick={(e) => {
                             e.stopPropagation();
-                            if (box.isDaily && !canOpenDailyBox()) return;
-                            if (!box.isDaily && playerStats.currentStars < box.price) return;
-                            handleBoxOpen(box, false);
+                            setSelectedBoxForDetails(box);
+                            setShowBoxDetails(true);
                           }}
                           disabled={box.isDaily ? !canOpenDailyBox() : playerStats.currentStars < box.price}
                         >
@@ -554,6 +559,106 @@ const Index = () => {
               </>
             )}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Box Details Dialog */}
+      <Dialog open={showBoxDetails} onOpenChange={setShowBoxDetails}>
+        <DialogContent className="bg-gaming-dark border-neon-cyan max-w-lg mx-auto max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-center text-neon-cyan neon-text text-xl">
+              {selectedBoxForDetails?.name}
+            </DialogTitle>
+          </DialogHeader>
+          
+          {selectedBoxForDetails && (
+            <div className="space-y-6">
+              {/* Current Rewards Carousel */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-center">Текущие призы</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-gaming-dark-card border-2 border-neon-yellow rounded-lg p-4 text-center">
+                    <div className="w-16 h-16 mx-auto mb-2 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center">
+                      <Icon name="Star" size={32} className="text-white" />
+                    </div>
+                    <div className="text-lg font-bold text-neon-yellow">⭐ 1200</div>
+                  </div>
+                  <div className="bg-gaming-dark-card border-2 border-neon-pink rounded-lg p-4 text-center">
+                    <div className="w-16 h-16 mx-auto mb-2 bg-gradient-to-br from-pink-500 to-red-500 rounded-full flex items-center justify-center">
+                      <Icon name="Heart" size={32} className="text-white" />
+                    </div>
+                    <div className="text-lg font-bold text-neon-pink">⭐ 1700</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Try Your Luck Button */}
+              <Button 
+                className="w-full py-4 text-lg bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-bold rounded-lg"
+                onClick={() => {
+                  setShowBoxDetails(false);
+                  setIsDemoMode(true);
+                  handleBoxOpen(selectedBoxForDetails, true);
+                }}
+              >
+                Испытай удачу - {selectedBoxForDetails.price} ⭐
+              </Button>
+
+              {/* Demo Mode Toggle */}
+              <div className="flex items-center justify-between p-3 bg-gaming-dark-card rounded-lg">
+                <span className="text-sm text-muted-foreground">Демо режим</span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className={`${isDemoMode ? 'bg-neon-green text-gaming-dark' : 'border-gray-600'}`}
+                  onClick={() => setIsDemoMode(!isDemoMode)}
+                >
+                  {isDemoMode ? 'ВКЛ' : 'ВЫКЛ'}
+                </Button>
+              </div>
+
+              {/* Main Prize */}
+              <div className="space-y-3">
+                <h3 className="text-lg font-semibold">Главный приз</h3>
+                <div className="bg-gaming-dark-card border border-neon-purple/30 rounded-lg p-4">
+                  <div className="flex items-center space-x-4">
+                    <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-purple-500 rounded-lg flex items-center justify-center">
+                      <span className="text-2xl">💎</span>
+                    </div>
+                    <div>
+                      <div className="font-semibold">Подарок #1</div>
+                      <div className="text-lg font-bold text-neon-yellow">⭐ 21000</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Other Prizes */}
+              <div className="space-y-3">
+                <h3 className="text-lg font-semibold">Остальные призы</h3>
+                <div className="space-y-2">
+                  {[
+                    { icon: '🧪', name: 'Подарок #2', stars: 15000, color: 'from-green-400 to-teal-500' },
+                    { icon: '🪙', name: 'Подарок #3', stars: 14000, color: 'from-yellow-400 to-orange-500' },
+                    { icon: '⌚', name: 'Подарок #4', stars: 10000, color: 'from-gray-400 to-gray-600' },
+                    { icon: '🐸', name: 'Подарок #5', stars: 8000, color: 'from-green-300 to-green-500' }
+                  ].map((prize, index) => (
+                    <div key={index} className="bg-gaming-dark-card border border-gray-700 rounded-lg p-3">
+                      <div className="flex items-center space-x-3">
+                        <div className={`w-10 h-10 bg-gradient-to-br ${prize.color} rounded-lg flex items-center justify-center`}>
+                          <span className="text-lg">{prize.icon}</span>
+                        </div>
+                        <div className="flex-1">
+                          <div className="font-medium text-sm">{prize.name}</div>
+                          <div className="text-sm font-bold text-neon-yellow">⭐ {prize.stars.toLocaleString()}</div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
