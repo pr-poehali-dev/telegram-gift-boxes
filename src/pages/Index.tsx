@@ -3,6 +3,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import Icon from '@/components/ui/icon';
 
 interface GiftBox {
@@ -46,6 +47,9 @@ const Index = () => {
     dailyBoxLastOpened: localStorage.getItem('dailyBoxLastOpened')
   });
   const [timeUntilNextDaily, setTimeUntilNextDaily] = useState<string>('');
+  const [isOpeningBox, setIsOpeningBox] = useState(false);
+  const [openingResult, setOpeningResult] = useState<{type: 'stars' | 'heart' | 'rose', amount: number} | null>(null);
+  const [isDemoMode, setIsDemoMode] = useState(false);
 
   const giftBoxes: GiftBox[] = [
     {
@@ -138,41 +142,72 @@ const Index = () => {
     return `${hours}ч ${minutes}м`;
   };
 
-  const handleBoxOpen = (box: GiftBox) => {
+  const generateDailyReward = () => {
+    const random = Math.random();
+    
+    // 90% chance for 1-3 stars
+    if (random < 0.9) {
+      return { type: 'stars' as const, amount: Math.floor(Math.random() * 3) + 1 };
+    }
+    
+    // 10% chance for higher rewards (4-10 stars)
+    const higherReward = Math.floor(Math.random() * 7) + 4; // 4-10
+    return { type: 'stars' as const, amount: higherReward };
+  };
+
+  const handleBoxOpen = async (box: GiftBox, demo = false) => {
     if (box.isDaily) {
-      if (!canOpenDailyBox()) return;
+      if (!demo && !canOpenDailyBox()) return;
       
-      // Generate random reward
-      const reward = Math.floor(Math.random() * (box.maxReward! - box.minReward! + 1)) + box.minReward!;
+      setIsOpeningBox(true);
+      setOpeningResult(null);
       
-      // Update player stats
-      setPlayerStats(prev => ({
-        ...prev,
-        currentStars: prev.currentStars + reward - 1, // -1 for box cost
-        totalWins: prev.totalWins + 1,
-        dailyBoxLastOpened: new Date().toISOString()
-      }));
+      // Animation delay
+      await new Promise(resolve => setTimeout(resolve, 2000));
       
-      // Save to localStorage
-      localStorage.setItem('dailyBoxLastOpened', new Date().toISOString());
+      // Generate reward (always stars for daily box, never heart/rose)
+      const result = generateDailyReward();
+      setOpeningResult(result);
       
-      alert(`Поздравляем! Вы получили ${reward} звезд! ⭐`);
+      if (!demo) {
+        // Update player stats only if not demo
+        setPlayerStats(prev => ({
+          ...prev,
+          currentStars: prev.currentStars + result.amount - 1, // -1 for box cost
+          totalWins: prev.totalWins + 1,
+          dailyBoxLastOpened: new Date().toISOString()
+        }));
+        
+        // Save to localStorage
+        localStorage.setItem('dailyBoxLastOpened', new Date().toISOString());
+      }
     } else {
       // Handle regular box opening
-      if (playerStats.currentStars < box.price) {
+      if (!demo && playerStats.currentStars < box.price) {
         alert('Недостаточно звезд!');
         return;
       }
       
-      setPlayerStats(prev => ({
-        ...prev,
-        currentStars: prev.currentStars - box.price,
-        totalSpent: prev.totalSpent + box.price,
-        totalWins: prev.totalWins + 1
-      }));
+      setIsOpeningBox(true);
+      await new Promise(resolve => setTimeout(resolve, 2000));
       
-      alert(`Бокс "${box.name}" открыт! 🎁`);
+      if (!demo) {
+        setPlayerStats(prev => ({
+          ...prev,
+          currentStars: prev.currentStars - box.price,
+          totalSpent: prev.totalSpent + box.price,
+          totalWins: prev.totalWins + 1
+        }));
+      }
+      
+      setOpeningResult({ type: 'stars', amount: 50 }); // Demo result for other boxes
     }
+  };
+
+  const closeBoxResult = () => {
+    setIsOpeningBox(false);
+    setOpeningResult(null);
+    setIsDemoMode(false);
   };
 
   useEffect(() => {
@@ -273,8 +308,22 @@ const Index = () => {
                               <span className="text-xs font-semibold">25</span>
                             </div>
                           </div>
-                          <div className="text-xs text-center text-neon-cyan mt-2 animate-pulse">
-                            ✨ Шанс на МЕГА ПРИЗ! ✨
+                          <div className="flex justify-between items-center mt-2">
+                            <div className="text-xs text-center text-neon-cyan animate-pulse">
+                              ✨ Шанс на МЕГА ПРИЗ! ✨
+                            </div>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-xs border-neon-purple text-neon-purple hover:bg-neon-purple hover:text-gaming-dark"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setIsDemoMode(true);
+                                handleBoxOpen(box, true);
+                              }}
+                            >
+                              🎬 Демо
+                            </Button>
                           </div>
                         </div>
                       )}
@@ -300,7 +349,7 @@ const Index = () => {
                             e.stopPropagation();
                             if (box.isDaily && !canOpenDailyBox()) return;
                             if (!box.isDaily && playerStats.currentStars < box.price) return;
-                            handleBoxOpen(box);
+                            handleBoxOpen(box, false);
                           }}
                           disabled={box.isDaily ? !canOpenDailyBox() : playerStats.currentStars < box.price}
                         >
@@ -425,6 +474,88 @@ const Index = () => {
           </div>
         </div>
       </div>
+
+      {/* Box Opening Animation Dialog */}
+      <Dialog open={isOpeningBox} onOpenChange={closeBoxResult}>
+        <DialogContent className="bg-gaming-dark border-neon-cyan max-w-md mx-auto">
+          <DialogHeader>
+            <DialogTitle className="text-center text-neon-cyan neon-text">
+              {isDemoMode ? '🎬 Демо режим' : '🎁 Открытие бокса'}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col items-center space-y-6 py-8">
+            {!openingResult ? (
+              <>
+                <div className="relative">
+                  <div className="w-32 h-32 bg-gradient-to-br from-neon-green/20 to-neon-cyan/20 rounded-lg border-2 border-neon-green animate-neon-glow">
+                    <div className="w-full h-full flex items-center justify-center">
+                      <Icon name="Gift" size={60} className="text-neon-green animate-float" />
+                    </div>
+                  </div>
+                  <div className="absolute -inset-4 bg-neon-green/10 rounded-full animate-ping"></div>
+                </div>
+                <div className="text-center space-y-2">
+                  <p className="text-lg font-semibold animate-pulse">Открываем бокс...</p>
+                  <div className="flex space-x-1 justify-center">
+                    <div className="w-2 h-2 bg-neon-cyan rounded-full animate-bounce"></div>
+                    <div className="w-2 h-2 bg-neon-pink rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
+                    <div className="w-2 h-2 bg-neon-purple rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="relative">
+                  <div className="w-32 h-32 bg-gradient-to-br from-neon-yellow/30 to-neon-green/20 rounded-lg border-2 border-neon-yellow animate-neon-glow">
+                    <div className="w-full h-full flex items-center justify-center">
+                      {openingResult.type === 'stars' && (
+                        <div className="text-center">
+                          <Icon name="Star" size={40} className="text-neon-yellow mx-auto mb-2" />
+                          <div className="text-2xl font-bold text-neon-yellow">+{openingResult.amount}</div>
+                        </div>
+                      )}
+                      {openingResult.type === 'heart' && (
+                        <div className="text-center">
+                          <Icon name="Heart" size={40} className="text-neon-pink mx-auto mb-2" />
+                          <div className="text-2xl font-bold text-neon-pink">+{openingResult.amount}</div>
+                        </div>
+                      )}
+                      {openingResult.type === 'rose' && (
+                        <div className="text-center">
+                          <div className="text-4xl mb-2">🌹</div>
+                          <div className="text-2xl font-bold text-red-400">+{openingResult.amount}</div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="absolute -inset-4 bg-neon-yellow/20 rounded-full animate-ping"></div>
+                </div>
+                <div className="text-center space-y-2">
+                  <p className="text-2xl font-bold text-neon-green">
+                    {isDemoMode ? '🎬 Демо результат!' : '🎉 Поздравляем!'}
+                  </p>
+                  <p className="text-lg">
+                    Вы получили {openingResult.amount} {' '}
+                    {openingResult.type === 'stars' ? 'звезд' : 
+                     openingResult.type === 'heart' ? 'сердец' : 'роз'}!
+                  </p>
+                  {isDemoMode && (
+                    <p className="text-sm text-muted-foreground">
+                      * В реальной игре сердца и розы не выпадают в дневном боксе
+                    </p>
+                  )}
+                </div>
+                <Button 
+                  onClick={closeBoxResult}
+                  className="bg-gradient-to-r from-neon-cyan to-neon-purple hover:from-neon-purple hover:to-neon-pink text-gaming-dark font-semibold"
+                >
+                  Отлично!
+                </Button>
+              </>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
