@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -9,9 +9,13 @@ interface GiftBox {
   id: number;
   name: string;
   price: number;
-  rarity: 'common' | 'rare' | 'epic' | 'legendary';
+  rarity: 'common' | 'rare' | 'epic' | 'legendary' | 'daily';
   image: string;
   description: string;
+  isDaily?: boolean;
+  minReward?: number;
+  maxReward?: number;
+  cooldownHours?: number;
 }
 
 interface PlayerStats {
@@ -23,11 +27,13 @@ interface PlayerStats {
   level: number;
   experience: number;
   nextLevelExp: number;
+  currentStars: number;
+  dailyBoxLastOpened: string | null;
 }
 
 const Index = () => {
   const [selectedBox, setSelectedBox] = useState<number | null>(null);
-  const [playerStats] = useState<PlayerStats>({
+  const [playerStats, setPlayerStats] = useState<PlayerStats>({
     totalSpent: 2450,
     totalWins: 127,
     bestWin: 'Космический скин',
@@ -35,10 +41,25 @@ const Index = () => {
     favoriteBox: 'Киберпанк бокс',
     level: 15,
     experience: 3420,
-    nextLevelExp: 4000
+    nextLevelExp: 4000,
+    currentStars: 85,
+    dailyBoxLastOpened: localStorage.getItem('dailyBoxLastOpened')
   });
+  const [timeUntilNextDaily, setTimeUntilNextDaily] = useState<string>('');
 
   const giftBoxes: GiftBox[] = [
+    {
+      id: 0,
+      name: 'Дневной бонус',
+      price: 1,
+      rarity: 'daily',
+      image: '/img/0950a1a2-c10d-41fe-aa33-3dc1d9711658.jpg',
+      description: 'Ежедневная награда: от 2 до 10 звезд',
+      isDaily: true,
+      minReward: 2,
+      maxReward: 10,
+      cooldownHours: 24
+    },
     {
       id: 1,
       name: 'Стартовый бокс',
@@ -75,6 +96,7 @@ const Index = () => {
 
   const getRarityColor = (rarity: string) => {
     switch (rarity) {
+      case 'daily': return 'text-neon-green border-neon-green';
       case 'common': return 'text-neon-cyan border-neon-cyan';
       case 'rare': return 'text-neon-pink border-neon-pink';
       case 'epic': return 'text-neon-purple border-neon-purple';
@@ -85,6 +107,7 @@ const Index = () => {
 
   const getRarityBg = (rarity: string) => {
     switch (rarity) {
+      case 'daily': return 'from-neon-green/20 to-neon-green/5';
       case 'common': return 'from-neon-cyan/20 to-neon-cyan/5';
       case 'rare': return 'from-neon-pink/20 to-neon-pink/5';
       case 'epic': return 'from-neon-purple/20 to-neon-purple/5';
@@ -92,6 +115,76 @@ const Index = () => {
       default: return 'from-neon-cyan/20 to-neon-cyan/5';
     }
   };
+
+  const canOpenDailyBox = () => {
+    if (!playerStats.dailyBoxLastOpened) return true;
+    const lastOpened = new Date(playerStats.dailyBoxLastOpened);
+    const now = new Date();
+    const timeDiff = now.getTime() - lastOpened.getTime();
+    return timeDiff >= 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+  };
+
+  const getTimeUntilNextDaily = () => {
+    if (!playerStats.dailyBoxLastOpened) return '';
+    const lastOpened = new Date(playerStats.dailyBoxLastOpened);
+    const nextAvailable = new Date(lastOpened.getTime() + 24 * 60 * 60 * 1000);
+    const now = new Date();
+    const timeDiff = nextAvailable.getTime() - now.getTime();
+    
+    if (timeDiff <= 0) return '';
+    
+    const hours = Math.floor(timeDiff / (1000 * 60 * 60));
+    const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
+    return `${hours}ч ${minutes}м`;
+  };
+
+  const handleBoxOpen = (box: GiftBox) => {
+    if (box.isDaily) {
+      if (!canOpenDailyBox()) return;
+      
+      // Generate random reward
+      const reward = Math.floor(Math.random() * (box.maxReward! - box.minReward! + 1)) + box.minReward!;
+      
+      // Update player stats
+      setPlayerStats(prev => ({
+        ...prev,
+        currentStars: prev.currentStars + reward - 1, // -1 for box cost
+        totalWins: prev.totalWins + 1,
+        dailyBoxLastOpened: new Date().toISOString()
+      }));
+      
+      // Save to localStorage
+      localStorage.setItem('dailyBoxLastOpened', new Date().toISOString());
+      
+      alert(`Поздравляем! Вы получили ${reward} звезд! ⭐`);
+    } else {
+      // Handle regular box opening
+      if (playerStats.currentStars < box.price) {
+        alert('Недостаточно звезд!');
+        return;
+      }
+      
+      setPlayerStats(prev => ({
+        ...prev,
+        currentStars: prev.currentStars - box.price,
+        totalSpent: prev.totalSpent + box.price,
+        totalWins: prev.totalWins + 1
+      }));
+      
+      alert(`Бокс "${box.name}" открыт! 🎁`);
+    }
+  };
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setTimeUntilNextDaily(getTimeUntilNextDaily());
+    }, 60000); // Update every minute
+    
+    // Initial update
+    setTimeUntilNextDaily(getTimeUntilNextDaily());
+    
+    return () => clearInterval(interval);
+  }, [playerStats.dailyBoxLastOpened]);
 
   return (
     <div className="min-h-screen bg-gaming-dark text-foreground dark">
@@ -105,7 +198,7 @@ const Index = () => {
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-2">
               <Icon name="Star" className="text-neon-yellow" size={20} />
-              <span className="font-semibold">{playerStats.totalSpent}</span>
+              <span className="font-semibold">{playerStats.currentStars}</span>
             </div>
             <div className="flex items-center space-x-2">
               <Icon name="User" className="text-neon-pink" size={20} />
@@ -156,23 +249,37 @@ const Index = () => {
                       <div className="flex justify-between items-start">
                         <h4 className="font-bold text-lg">{box.name}</h4>
                         <Badge className={`${getRarityColor(box.rarity)} bg-transparent border`}>
-                          {box.rarity.toUpperCase()}
+                          {box.rarity === 'daily' ? 'ЕЖЕДНЕВНЫЙ' : box.rarity.toUpperCase()}
                         </Badge>
                       </div>
                       <p className="text-sm text-muted-foreground">{box.description}</p>
                       <div className="flex justify-between items-center pt-3">
                         <div className="flex items-center space-x-1">
                           <Icon name="Star" className="text-neon-yellow" size={16} />
-                          <span className="font-semibold text-neon-yellow">{box.price}</span>
+                          <span className="font-semibold text-neon-yellow">
+                            {box.isDaily ? `${box.price} → ${box.minReward}-${box.maxReward}` : box.price}
+                          </span>
                         </div>
                         <Button 
-                          className="bg-gradient-to-r from-neon-cyan to-neon-purple hover:from-neon-purple hover:to-neon-pink text-gaming-dark font-semibold"
+                          className={`${box.isDaily 
+                            ? (canOpenDailyBox() 
+                              ? 'bg-gradient-to-r from-neon-green to-neon-cyan hover:from-neon-cyan hover:to-neon-green' 
+                              : 'bg-gray-600 cursor-not-allowed opacity-50'
+                            ) 
+                            : (playerStats.currentStars >= box.price
+                              ? 'bg-gradient-to-r from-neon-cyan to-neon-purple hover:from-neon-purple hover:to-neon-pink'
+                              : 'bg-gray-600 cursor-not-allowed opacity-50'
+                            )
+                          } text-gaming-dark font-semibold`}
                           onClick={(e) => {
                             e.stopPropagation();
-                            // Открытие бокса
+                            if (box.isDaily && !canOpenDailyBox()) return;
+                            if (!box.isDaily && playerStats.currentStars < box.price) return;
+                            handleBoxOpen(box);
                           }}
+                          disabled={box.isDaily ? !canOpenDailyBox() : playerStats.currentStars < box.price}
                         >
-                          Открыть
+                          {box.isDaily && !canOpenDailyBox() ? timeUntilNextDaily : 'Открыть'}
                         </Button>
                       </div>
                     </div>
