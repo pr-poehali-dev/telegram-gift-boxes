@@ -30,21 +30,23 @@ interface PlayerStats {
   nextLevelExp: number;
   currentStars: number;
   dailyBoxLastOpened: string | null;
+  referrals: number;
 }
 
 const Index = () => {
   const [selectedBox, setSelectedBox] = useState<number | null>(null);
   const [playerStats, setPlayerStats] = useState<PlayerStats>({
-    totalSpent: 2450,
-    totalWins: 127,
-    bestWin: 'Космический скин',
-    winRate: 68,
-    favoriteBox: 'Киберпанк бокс',
-    level: 15,
-    experience: 3420,
-    nextLevelExp: 4000,
-    currentStars: 85,
-    dailyBoxLastOpened: localStorage.getItem('dailyBoxLastOpened')
+    totalSpent: 0,
+    totalWins: 0,
+    bestWin: '-',
+    winRate: 0,
+    favoriteBox: '-',
+    level: 1,
+    experience: 0,
+    nextLevelExp: 100,
+    currentStars: 0,
+    dailyBoxLastOpened: localStorage.getItem('dailyBoxLastOpened'),
+    referrals: 0
   });
   const [timeUntilNextDaily, setTimeUntilNextDaily] = useState<string>('');
   const [isOpeningBox, setIsOpeningBox] = useState(false);
@@ -72,23 +74,23 @@ const Index = () => {
       price: 10,
       rarity: 'common',
       image: '/img/9bdeb094-2c26-4a77-abf0-e0ce95d34df0.jpg',
-      description: 'Идеальный выбор для начинающих космонавтов'
+      description: 'Звезды и подарки для новичков'
     },
     {
       id: 2,
-      name: 'Киберпанк бокс',
+      name: 'Премиум бокс',
       price: 50,
       rarity: 'rare',
       image: '/img/92d340cd-2886-43a9-afae-05dc7df7b25d.jpg',
-      description: 'Футуристические награды из мегаполиса будущего'
+      description: 'Звезды и премиальные подарки Telegram'
     },
     {
       id: 3,
-      name: 'Легендарный бокс',
+      name: 'Элитный бокс',
       price: 200,
       rarity: 'legendary',
       image: '/img/1c5d0183-c469-4220-b6d6-b2c1f14e231e.jpg',
-      description: 'Эксклюзивные награды для элитных игроков'
+      description: 'Эксклюзивные подарки и большие призы'
     }
   ];
 
@@ -157,6 +159,44 @@ const Index = () => {
     return { type: 'stars' as const, amount: higherReward };
   };
 
+  const generateStarterReward = () => {
+    const random = Math.random();
+    
+    // 10% chance for heart (15 stars)
+    if (random < 0.1) {
+      return { type: 'heart' as const, amount: 15 };
+    }
+    
+    // 90% chance for stars
+    const starRandom = Math.random();
+    
+    // 90% of stars: 7-15 range
+    if (starRandom < 0.9) {
+      return { type: 'stars' as const, amount: Math.floor(Math.random() * 9) + 7 }; // 7-15
+    }
+    
+    // 10% of stars: 16-20 range
+    return { type: 'stars' as const, amount: Math.floor(Math.random() * 5) + 16 }; // 16-20
+  };
+
+  const generatePremiumReward = () => {
+    const random = Math.random();
+    
+    if (random < 0.3) return { type: 'stars' as const, amount: Math.floor(Math.random() * 50) + 40 }; // 40-90
+    if (random < 0.5) return { type: 'heart' as const, amount: 15 };
+    if (random < 0.7) return { type: 'rose' as const, amount: 25 };
+    return { type: 'stars' as const, amount: Math.floor(Math.random() * 100) + 100 }; // 100-200
+  };
+
+  const generateEliteReward = () => {
+    const random = Math.random();
+    
+    if (random < 0.2) return { type: 'stars' as const, amount: Math.floor(Math.random() * 200) + 150 }; // 150-350
+    if (random < 0.4) return { type: 'heart' as const, amount: 15 };
+    if (random < 0.6) return { type: 'rose' as const, amount: 25 };
+    return { type: 'stars' as const, amount: Math.floor(Math.random() * 500) + 500 }; // 500-1000
+  };
+
   const handleBoxOpen = async (box: GiftBox, demo = false) => {
     if (box.isDaily) {
       if (!demo && !canOpenDailyBox()) return;
@@ -167,9 +207,28 @@ const Index = () => {
       // Animation delay
       await new Promise(resolve => setTimeout(resolve, 2000));
       
-      // Generate reward (always stars for daily box, never heart/rose)
-      const result = generateDailyReward();
+      // Generate reward based on box type
+      let result;
+      if (box.id === 0) { // Daily box
+        result = generateDailyReward();
+      } else if (box.id === 1) { // Starter box
+        result = generateStarterReward();
+      } else if (box.id === 2) { // Premium box
+        result = generatePremiumReward();
+      } else if (box.id === 3) { // Elite box
+        result = generateEliteReward();
+      } else {
+        result = { type: 'stars' as const, amount: 10 };
+      }
+      
       setOpeningResult(result);
+      
+      // Special message for heart win
+      if (result.type === 'heart' && !demo) {
+        setTimeout(() => {
+          alert('💝 Поздравляем! Пишите @tamotock за подарком!');
+        }, 3000);
+      }
       
       if (!demo) {
         // Update player stats only if not demo
@@ -333,6 +392,22 @@ const Index = () => {
                           </div>
                         </div>
                       )}
+                      {!box.isDaily && (
+                        <div className="mt-3 text-center">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-xs border-neon-purple text-neon-purple hover:bg-neon-purple hover:text-gaming-dark"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedBoxForDetails(box);
+                              setShowBoxDetails(true);
+                            }}
+                          >
+                            🎬 Демо режим
+                          </Button>
+                        </div>
+                      )}
                       <div className="flex justify-between items-center pt-3">
                         <div className="flex items-center space-x-1">
                           <Icon name="Star" className="text-neon-yellow" size={16} />
@@ -408,6 +483,28 @@ const Index = () => {
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Потрачено звезд:</span>
                     <span className="font-semibold text-neon-yellow">{playerStats.totalSpent}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Рефералы:</span>
+                    <span className="font-semibold text-neon-green">{playerStats.referrals}</span>
+                  </div>
+                  <div className="pt-2 border-t border-border">
+                    <Button 
+                      variant="outline" 
+                      className="w-full text-xs border-neon-green text-neon-green hover:bg-neon-green hover:text-gaming-dark"
+                      onClick={() => {
+                        const newReferrals = playerStats.referrals + 1;
+                        const newStars = playerStats.currentStars + 1;
+                        setPlayerStats(prev => ({
+                          ...prev,
+                          referrals: newReferrals,
+                          currentStars: newStars
+                        }));
+                        alert('🎉 Новый реферал! +1 звезда');
+                      }}
+                    >
+                      👥 Пригласить друга (+1⭐)
+                    </Button>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Выигрышей:</span>
@@ -522,7 +619,8 @@ const Index = () => {
                       {openingResult.type === 'heart' && (
                         <div className="text-center">
                           <Icon name="Heart" size={40} className="text-neon-pink mx-auto mb-2" />
-                          <div className="text-2xl font-bold text-neon-pink">+{openingResult.amount}</div>
+                          <div className="text-2xl font-bold text-neon-pink">💝 Сердце!</div>
+                          <div className="text-sm text-neon-pink">Пишите @tamotock</div>
                         </div>
                       )}
                       {openingResult.type === 'rose' && (
@@ -540,13 +638,18 @@ const Index = () => {
                     {isDemoMode ? '🎬 Демо результат!' : '🎉 Поздравляем!'}
                   </p>
                   <p className="text-lg">
-                    Вы получили {openingResult.amount} {' '}
-                    {openingResult.type === 'stars' ? 'звезд' : 
-                     openingResult.type === 'heart' ? 'сердец' : 'роз'}!
+                    {openingResult.type === 'stars' ? `Вы получили ${openingResult.amount} звезд!` :
+                     openingResult.type === 'heart' ? 'Вы выиграли СЕРДЦЕ! 💝' :
+                     openingResult.type === 'rose' ? 'Вы выиграли РОЗУ! 🌹' : 'Поздравляем!'}
                   </p>
                   {isDemoMode && (
                     <p className="text-sm text-muted-foreground">
-                      * В реальной игре сердца и розы не выпадают в дневном боксе
+                      * Демо режим - результат не засчитывается
+                    </p>
+                  )}
+                  {openingResult.type === 'heart' && !isDemoMode && (
+                    <p className="text-sm text-neon-pink text-center font-bold animate-pulse">
+                      🎁 Напишите @tamotock за подарком! 🎁
                     </p>
                   )}
                 </div>
