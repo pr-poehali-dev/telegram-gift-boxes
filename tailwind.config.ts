@@ -61,6 +61,20 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
+				},
+				neon: {
+					cyan: '#00FFFF',
+					pink: '#FF69B4',
+					purple: '#7B2CFF',
+					green: '#39FF14',
+					blue: '#0EA5E9',
+					yellow: '#FFD700'
+				},
+				gaming: {
+					dark: '#0F0F0F',
+					'dark-card': '#1A1A1A',
+					'gray-800': '#1F2937',
+					'gray-700': '#374151'
 				}
 			},
 			borderRadius: {
@@ -84,11 +98,29 @@ export default {
 					to: {
 						height: '0'
 					}
+				},
+				'neon-glow': {
+					'0%, 100%': {
+						boxShadow: '0 0 5px currentColor, 0 0 10px currentColor, 0 0 15px currentColor'
+					},
+					'50%': {
+						boxShadow: '0 0 10px currentColor, 0 0 20px currentColor, 0 0 30px currentColor'
+					}
+				},
+				'float': {
+					'0%, 100%': {
+						transform: 'translateY(0px)'
+					},
+					'50%': {
+						transform: 'translateY(-10px)'
+					}
 				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out'
+				'accordion-up': 'accordion-up 0.2s ease-out',
+				'neon-glow': 'neon-glow 2s ease-in-out infinite',
+				'float': 'float 3s ease-in-out infinite'
 			}
 		}
 	},
