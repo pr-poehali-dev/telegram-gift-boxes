@@ -253,6 +253,30 @@ const Index = () => {
                         </Badge>
                       </div>
                       <p className="text-sm text-muted-foreground">{box.description}</p>
+                      {box.isDaily && (
+                        <div className="mt-3 p-3 bg-gaming-dark/30 rounded-lg border border-neon-green/20">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-xs text-muted-foreground">Возможные награды:</span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-2">
+                              <div className="flex items-center space-x-1">
+                                <Icon name="Star" className="text-neon-yellow" size={12} />
+                                <span className="text-xs">2-10</span>
+                              </div>
+                            </div>
+                            <div className="flex items-center space-x-2 opacity-50">
+                              <div className="flex items-center space-x-1">
+                                <Icon name="Heart" className="text-neon-pink" size={12} />
+                                <span className="text-xs line-through">15</span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-xs text-muted-foreground/60 mt-1">
+                            * Сердце недоступно в дневном боксе
+                          </div>
+                        </div>
+                      )}
                       <div className="flex justify-between items-center pt-3">
                         <div className="flex items-center space-x-1">
                           <Icon name="Star" className="text-neon-yellow" size={16} />
