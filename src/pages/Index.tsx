@@ -257,23 +257,24 @@ const Index = () => {
                         <div className="mt-3 p-3 bg-gaming-dark/30 rounded-lg border border-neon-green/20">
                           <div className="flex items-center justify-between mb-2">
                             <span className="text-xs text-muted-foreground">Возможные награды:</span>
+                            <span className="text-xs text-neon-green animate-pulse">⚡ Удача!</span>
                           </div>
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-2">
-                              <div className="flex items-center space-x-1">
-                                <Icon name="Star" className="text-neon-yellow" size={12} />
-                                <span className="text-xs">2-10</span>
-                              </div>
+                          <div className="grid grid-cols-3 gap-2">
+                            <div className="flex items-center space-x-1 p-2 bg-neon-yellow/10 rounded border border-neon-yellow/30">
+                              <Icon name="Star" className="text-neon-yellow" size={14} />
+                              <span className="text-xs font-semibold">2-10</span>
                             </div>
-                            <div className="flex items-center space-x-2 opacity-50">
-                              <div className="flex items-center space-x-1">
-                                <Icon name="Heart" className="text-neon-pink" size={12} />
-                                <span className="text-xs line-through">15</span>
-                              </div>
+                            <div className="flex items-center space-x-1 p-2 bg-neon-pink/10 rounded border border-neon-pink/30">
+                              <Icon name="Heart" className="text-neon-pink" size={14} />
+                              <span className="text-xs font-semibold">15</span>
+                            </div>
+                            <div className="flex items-center space-x-1 p-2 bg-red-500/10 rounded border border-red-500/30">
+                              <span className="text-red-400 text-sm">🌹</span>
+                              <span className="text-xs font-semibold">25</span>
                             </div>
                           </div>
-                          <div className="text-xs text-muted-foreground/60 mt-1">
-                            * Сердце недоступно в дневном боксе
+                          <div className="text-xs text-center text-neon-cyan mt-2 animate-pulse">
+                            ✨ Шанс на МЕГА ПРИЗ! ✨
                           </div>
                         </div>
                       )}
